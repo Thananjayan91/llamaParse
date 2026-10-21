@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LlamaParse & RAG Studio{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header Banner -->
+    <div class="col-12">
+        <div class="card card-custom p-4 bg-gradient-hero">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h2 class="hero-title mb-1"><i class="bi bi-cpu text-info me-2"></i>LlamaParse & RAG Studio</h2>
+                    <p class="hero-subtitle mb-0">High-accuracy document parsing, schema-based structured extraction, and retrieval-augmented generation.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('parse_page') }}" class="btn btn-primary px-4 py-2">
+                        <i class="bi bi-file-earmark-plus me-1"></i> Parse Document
+                    </a>
+                    <a href="{{ url_for('rag_page') }}" class="btn btn-outline-light px-4 py-2">
+                        <i class="bi bi-search me-1"></i> Query RAG
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="col-md-4">
+        <div class="card card-custom p-4 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small text-uppercase fw-semibold">Parsed Documents</span>
+                    <div class="stat-number mt-1 mb-0">{{ parsed_count }}</div>
+                </div>
+                <div class="stat-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-file-earmark-text fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{{ url_for('parse_page') }}" class="small text-info text-decoration-none fw-semibold">
+                    Upload & Parse <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-custom p-4 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small text-uppercase fw-semibold">Structured Extractions</span>
+                    <div class="stat-number mt-1 mb-0">{{ extracted_count }}</div>
+                </div>
+                <div class="stat-icon bg-success-subtle text-success">
+                    <i class="bi bi-braces-asterisk fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{{ url_for('extract_page') }}" class="small text-success text-decoration-none fw-semibold">
+                    Extract with Schema <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-custom p-4 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small text-uppercase fw-semibold">RAG Knowledge Base</span>
+                    <div class="stat-number mt-1 mb-0 text-info">Active</div>
+                </div>
+                <div class="stat-icon bg-info-subtle text-info">
+                    <i class="bi bi-database-check fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{{ url_for('rag_page') }}" class="small text-info text-decoration-none fw-semibold">
+                    Ask Questions <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Parse & Workflow Info -->
+    <div class="col-lg-7">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Quick Parse Document</h5>
+            <form id="quickParseForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label">Select File (PDF, DOCX, PPTX, Images, etc.)</label>
+                    <input type="file" class="form-control" id="quickFile" name="file" required>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Parsing Tier</label>
+                        <select class="form-select" name="tier" id="quickTier">
+                            {% for t in tiers %}
+                            <option value="{{ t }}" {% if t == 'agentic_plus' %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Version</label>
+                        <input type="text" class="form-control" name="version" value="latest">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="quickParseBtn">
+                    <i class="bi bi-cloud-arrow-up"></i> Start LlamaParse
+                </button>
+            </form>
+
+            <div id="quickParseLoading" class="text-center my-3 d-none">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-secondary small mt-2">Uploading and parsing document via LlamaCloud...</p>
+            </div>
+
+            <div id="quickParseResult" class="mt-3 d-none"></div>
+        </div>
+    </div>
+
+    <!-- Pipeline Architecture -->
+    <div class="col-lg-5">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-diagram-3-fill text-info me-2"></i>How It Works</h5>
+            <div class="timeline">
+                <div class="timeline-item mb-3">
+                    <div class="timeline-title text-info">1. LlamaParse Upload & Ingestion</div>
+                    <div class="timeline-desc">Uploads documents to LlamaCloud for agentic document analysis, OCR, table extraction, and layout-preserving parsing.</div>
+                </div>
+                <div class="timeline-item mb-3">
+                    <div class="timeline-title text-success">2. Markdown & Structured Output</div>
+                    <div class="timeline-desc">Generates clean full-fidelity Markdown (`.md`) and raw text (`.txt`), or extracts typed JSON using custom schemas with source citations.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-title text-primary">3. LlamaIndex RAG Retrieval</div>
+                    <div class="timeline-desc">Chunks and indexes documents for semantic retrieval, ranking relevant context nodes and answering questions with citations.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Documents Table -->
+    <div class="col-12">
+        <div class="card card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Recently Parsed Documents</h5>
+                <a href="{{ url_for('documents_page') }}" class="btn btn-sm btn-outline-secondary">View All Documents</a>
+            </div>
+
+            {% if recent_parsed %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-secondary small">
+                            <th>DOCUMENT NAME</th>
+                            <th>TIER</th>
+                            <th>PARSED AT</th>
+                            <th>MARKDOWN</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in recent_parsed %}
+                        <tr>
+                            <td class="fw-semibold">
+                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>{{ doc.original_filename }}
+                            </td>
+                            <td><span class="badge bg-primary-subtle text-primary">{{ doc.tier }}</span></td>
+                            <td class="text-secondary small">{{ doc.parsed_at[:19].replace('T', ' ') }}</td>
+                            <td class="text-secondary small">{{ doc.markdown_len }} chars</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('download_file', doc_id=doc.doc_id, file_type='md') }}" class="btn btn-outline-secondary" title="Download Markdown">
+                                        <i class="bi bi-download"></i> MD
+                                    </a>
+                                    <a href="{{ url_for('download_file', doc_id=doc.doc_id, file_type='txt') }}" class="btn btn-outline-secondary" title="Download Text">
+                                        <i class="bi bi-download"></i> TXT
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-secondary">
+                <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                No documents parsed yet. Upload a document to get started.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

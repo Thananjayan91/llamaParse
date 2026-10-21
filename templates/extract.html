@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Structured Extraction - LlamaParse & RAG Studio{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="bi bi-braces-asterisk text-success me-2"></i>Structured Data Extraction</h3>
+                <p class="text-secondary mb-0">Extract typed JSON from complex documents according to custom schemas with citations & confidence scores.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extraction Configuration & Schema Editor -->
+    <div class="col-lg-5">
+        <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-code text-success me-2"></i>Schema & File</h5>
+
+            <form id="extractForm" enctype="multipart/form-data">
+                <!-- Dropzone -->
+                <div class="upload-dropzone mb-3 text-center p-3 border border-secondary rounded" id="extractDropzone">
+                    <i class="bi bi-cloud-arrow-up text-success fs-2 mb-1"></i>
+                    <h6 class="fw-semibold small">Drag & Drop file here, or browse</h6>
+                    <input type="file" id="extractFileInput" name="file" class="d-none" required>
+                    <div id="selectedExtractFileName" class="badge bg-secondary p-2 d-none"></div>
+                </div>
+
+                <!-- Schema Preset Buttons -->
+                <div class="mb-2">
+                    <label class="form-label text-secondary small fw-semibold">Schema Presets</label>
+                    <div class="d-flex flex-wrap gap-1">
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="loadSchemaPreset('invoice')">Invoice / Receipt</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="loadSchemaPreset('resume')">Resume / CV</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="loadSchemaPreset('contract')">Legal Contract</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="loadSchemaPreset('custom')">Blank Template</button>
+                    </div>
+                </div>
+
+                <!-- Schema JSON Textarea -->
+                <div class="mb-3">
+                    <label class="form-label text-secondary small fw-semibold">Target JSON Schema</label>
+                    <textarea class="form-control font-monospace bg-dark border-secondary text-light small" id="schemaTextarea" name="schema" rows="8" style="font-size: 13px;">{
+  "title": "Invoice Data",
+  "type": "object",
+  "properties": {
+    "invoice_number": { "type": "string" },
+    "vendor_name": { "type": "string" },
+    "date": { "type": "string" },
+    "total_amount": { "type": "number" },
+    "currency": { "type": "string" },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "quantity": { "type": "number" },
+          "unit_price": { "type": "number" },
+          "amount": { "type": "number" }
+        }
+      }
+    }
+  }
+}</textarea>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="citeSourcesSwitch" name="cite_sources" value="true" checked>
+                            <label class="form-check-label text-light small" for="citeSourcesSwitch">Cite Sources</label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="confScoresSwitch" name="confidence_scores" value="true" checked>
+                            <label class="form-check-label text-light small" for="confScoresSwitch">Confidence Scores</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2" id="extractSubmitBtn">
+                    <i class="bi bi-gear-wide-connected"></i> Run Structured Extraction
+                </button>
+            </form>
+
+            <div id="extractProgress" class="text-center my-4 d-none">
+                <div class="spinner-border text-success mb-2" role="status"></div>
+                <div class="fw-semibold text-light">Running Extraction Job on LlamaCloud...</div>
+                <div class="text-secondary small">Extracting fields and calculating confidence metrics</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output JSON & Metadata Card -->
+    <div class="col-lg-7">
+        <div class="card card-custom p-4 h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-filetype-json text-warning me-2"></i>Extracted JSON Output</h5>
+                <button class="btn btn-sm btn-outline-secondary d-none" id="copyJsonBtn" onclick="copyToClipboard('extractedJsonContent')">
+                    <i class="bi bi-clipboard"></i> Copy JSON
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs border-secondary mb-3" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active text-light" data-bs-toggle="tab" data-bs-target="#jsonViewTab" type="button">
+                        <i class="bi bi-code-slash me-1"></i> JSON Data
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-light" data-bs-toggle="tab" data-bs-target="#metadataTab" type="button">
+                        <i class="bi bi-shield-check me-1"></i> Citations & Confidence
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content flex-grow-1 overflow-auto" style="max-height: 600px;">
+                <div class="tab-pane fade show active p-3 bg-dark border border-secondary rounded" id="jsonViewTab" role="tabpanel">
+                    <pre><code class="language-json" id="extractedJsonContent">No extraction results yet. Upload a document and run extraction.</code></pre>
+                </div>
+                <div class="tab-pane fade p-3 bg-dark border border-secondary rounded" id="metadataTab" role="tabpanel">
+                    <div id="fieldMetadataContent">
+                        <p class="text-secondary text-center py-4">Field citations and confidence scores will appear here after extraction.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const schemaPresets = {
+    invoice: {
+        "title": "Invoice Data",
+        "type": "object",
+        "properties": {
+            "invoice_number": { "type": "string" },
+            "vendor_name": { "type": "string" },
+            "date": { "type": "string" },
+            "total_amount": { "type": "number" },
+            "currency": { "type": "string" },
+            "line_items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "description": { "type": "string" },
+                        "quantity": { "type": "number" },
+                        "unit_price": { "type": "number" },
+                        "amount": { "type": "number" }
+                    }
+                }
+            }
+        }
+    },
+    resume: {
+        "title": "Resume Data",
+        "type": "object",
+        "properties": {
+            "full_name": { "type": "string" },
+            "email": { "type": "string" },
+            "phone": { "type": "string" },
+            "skills": { "type": "array", "items": { "type": "string" } },
+            "education": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "institution": { "type": "string" },
+                        "degree": { "type": "string" },
+                        "year": { "type": "string" }
+                    }
+                }
+            },
+            "experience": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "company": { "type": "string" },
+                        "role": { "type": "string" },
+                        "duration": { "type": "string" }
+                    }
+                }
+            }
+        }
+    },
+    contract: {
+        "title": "Legal Agreement",
+        "type": "object",
+        "properties": {
+            "parties_involved": { "type": "array", "items": { "type": "string" } },
+            "effective_date": { "type": "string" },
+            "term_length": { "type": "string" },
+            "governing_law": { "type": "string" },
+            "confidentiality_clause": { "type": "string" },
+            "termination_conditions": { "type": "string" }
+        }
+    },
+    custom: {
+        "title": "Custom Document Data",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "summary": { "type": "string" },
+            "key_points": { "type": "array", "items": { "type": "string" } }
+        }
+    }
+};
+
+function loadSchemaPreset(preset) {
+    if (schemaPresets[preset]) {
+        document.getElementById("schemaTextarea").value = JSON.stringify(schemaPresets[preset], null, 2);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const dropzone = document.getElementById("extractDropzone");
+    const fileInput = document.getElementById("extractFileInput");
+    const selectedFileName = document.getElementById("selectedExtractFileName");
+    const form = document.getElementById("extractForm");
+    const progress = document.getElementById("extractProgress");
+    const submitBtn = document.getElementById("extractSubmitBtn");
+
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("border-success"); });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("border-success"));
+    dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("border-success");
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            showFileName(fileInput.files[0].name);
+        }
+    });
+
+    fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) {
+            showFileName(fileInput.files[0].name);
+        }
+    });
+
+    function showFileName(name) {
+        selectedFileName.textContent = `Selected: ${name}`;
+        selectedFileName.classList.remove("d-none");
+    }
+
+    form.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        if (!fileInput.files.length) {
+            alert("Please select a file to extract.");
+            return;
+        }
+
+        const formData = new FormData(form);
+        progress.classList.remove("d-none");
+        submitBtn.disabled = true;
+
+        try {
+            const resp = await fetch("/extract", {
+                method: "POST",
+                body: formData
+            });
+            const res = await resp.json();
+            if (res.success) {
+                const jsonStr = JSON.stringify(res.data.result, null, 2);
+                document.getElementById("extractedJsonContent").textContent = jsonStr;
+                document.getElementById("copyJsonBtn").classList.remove("d-none");
+
+                // Render metadata
+                const metaContainer = document.getElementById("fieldMetadataContent");
+                if (res.data.field_metadata && Object.keys(res.data.field_metadata).length > 0) {
+                    let metaHtml = '<div class="table-responsive"><table class="table table-dark table-bordered table-sm small"><thead><tr><th>Field</th><th>Citation / Confidence Metadata</th></tr></thead><tbody>';
+                    for (const [k, v] of Object.entries(res.data.field_metadata)) {
+                        metaHtml += `<tr><td class="fw-bold text-success">${k}</td><td><code>${v}</code></td></tr>`;
+                    }
+                    metaHtml += '</tbody></table></div>';
+                    metaContainer.innerHTML = metaHtml;
+                } else {
+                    metaContainer.innerHTML = '<div class="text-secondary small">No specific per-field citation metadata returned.</div>';
+                }
+
+                hljs.highlightAll();
+            } else {
+                alert("Extraction failed: " + (res.error || "Unknown error"));
+            }
+        } catch (err) {
+            alert("Extraction error: " + err.message);
+        } finally {
+            progress.classList.add("d-none");
+            submitBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,27 @@
+# Environment Variables
+.env
+
+# Python Bytecode and Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Application Data & Uploads
+data/uploads/*
+data/parsed/*
+data/extracted/*
+data/indices/*
+!data/sample_doc.txt
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

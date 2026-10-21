@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Parse Documents - LlamaParse & RAG Studio{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="bi bi-file-earmark-text text-primary me-2"></i>LlamaParse Document Ingestion</h3>
+                <p class="text-secondary mb-0">Upload documents and parse with LlamaCloud agentic parsing tiers.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload & Config Card -->
+    <div class="col-lg-5">
+        <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-upload text-primary me-2"></i>Upload & Configuration</h5>
+
+            <form id="parseForm" enctype="multipart/form-data">
+                <!-- Dropzone -->
+                <div class="upload-dropzone mb-3 text-center p-4 border border-secondary rounded" id="dropzone">
+                    <i class="bi bi-cloud-arrow-up-fill text-primary display-4 mb-2"></i>
+                    <h6 class="fw-semibold">Drag & Drop file here, or click to browse</h6>
+                    <p class="text-secondary small mb-2">Supports PDF, DOCX, PPTX, TXT, PNG, JPG, CSV, XLSX</p>
+                    <input type="file" id="parseFileInput" name="file" class="d-none" required>
+                    <div id="selectedFileName" class="badge bg-secondary p-2 d-none"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-secondary small fw-semibold">Parsing Tier</label>
+                    <select class="form-select bg-dark border-secondary text-light" name="tier" id="parseTierSelect">
+                        {% for t in tiers %}
+                        <option value="{{ t }}" {% if t == default_tier %}selected{% endif %}>
+                            {{ t }} {% if t == 'agentic_plus' %}(Recommended - Best Quality){% elif t == 'agentic' %}(Smart Agentic Parsing){% elif t == 'cost_effective' %}(Balanced){% elif t == 'fast' %}(Ultra Fast){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text text-secondary small">Tier determines depth of OCR, table structure recovery, and agentic image/chart analysis.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-secondary small fw-semibold">Tier Version</label>
+                    <input type="text" class="form-control bg-dark border-secondary text-light" name="version" value="latest">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2" id="parseSubmitBtn">
+                    <i class="bi bi-cpu"></i> Parse Document
+                </button>
+            </form>
+
+            <div id="parseProgress" class="text-center my-4 d-none">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div class="fw-semibold text-light">Parsing with LlamaCloud...</div>
+                <div class="text-secondary small">Extracting layout, markdown tables, and text content</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output Viewer Card -->
+    <div class="col-lg-7">
+        <div class="card card-custom p-4 h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-code text-success me-2"></i>Parsed Output</h5>
+                <div class="d-flex gap-2" id="outputActions">
+                    <button class="btn btn-sm btn-outline-secondary d-none" id="copyMarkdownBtn" onclick="copyToClipboard('markdownContent')">
+                        <i class="bi bi-clipboard"></i> Copy Markdown
+                    </button>
+                    <a class="btn btn-sm btn-outline-primary d-none" id="downloadMdLink" href="#">
+                        <i class="bi bi-download"></i> Download .md
+                    </a>
+                    <a class="btn btn-sm btn-outline-info d-none" id="downloadTxtLink" href="#">
+                        <i class="bi bi-download"></i> Download .txt
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tabs for Markdown Preview / Raw Markdown / Raw Text -->
+            <ul class="nav nav-tabs border-secondary mb-3" id="outputTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active text-light" id="preview-tab" data-bs-toggle="tab" data-bs-target="#previewTabPane" type="button">
+                        <i class="bi bi-eye me-1"></i> Rendered Preview
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-light" id="raw-md-tab" data-bs-toggle="tab" data-bs-target="#rawMdTabPane" type="button">
+                        <i class="bi bi-markdown me-1"></i> Raw Markdown
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-light" id="raw-txt-tab" data-bs-toggle="tab" data-bs-target="#rawTxtTabPane" type="button">
+                        <i class="bi bi-file-text me-1"></i> Raw Text
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content flex-grow-1 overflow-auto" id="outputTabContent" style="max-height: 600px;">
+                <div class="tab-pane fade show active p-3 bg-dark border border-secondary rounded" id="previewTabPane" role="tabpanel">
+                    <div id="renderedMarkdown" class="markdown-body text-light">
+                        <p class="text-secondary text-center py-5">
+                            <i class="bi bi-file-earmark-arrow-up display-5 d-block mb-3 opacity-50"></i>
+                            Select a document and click "Parse Document" to view results here.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade p-3 bg-dark border border-secondary rounded" id="rawMdTabPane" role="tabpanel">
+                    <pre><code class="language-markdown" id="rawMarkdownContent">No markdown content yet.</code></pre>
+                </div>
+
+                <div class="tab-pane fade p-3 bg-dark border border-secondary rounded" id="rawTxtTabPane" role="tabpanel">
+                    <pre><code class="text-light" id="rawTextContent">No text content yet.</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("parseFileInput");
+    const selectedFileName = document.getElementById("selectedFileName");
+    const form = document.getElementById("parseForm");
+    const progress = document.getElementById("parseProgress");
+    const submitBtn = document.getElementById("parseSubmitBtn");
+
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("border-primary"); });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("border-primary"));
+    dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("border-primary");
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            showFileName(fileInput.files[0].name);
+        }
+    });
+
+    fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) {
+            showFileName(fileInput.files[0].name);
+        }
+    });
+
+    function showFileName(name) {
+        selectedFileName.textContent = `Selected: ${name}`;
+        selectedFileName.classList.remove("d-none");
+    }
+
+    form.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        if (!fileInput.files.length) {
+            alert("Please select a file to parse.");
+            return;
+        }
+
+        const formData = new FormData(form);
+        progress.classList.remove("d-none");
+        submitBtn.disabled = true;
+
+        try {
+            const resp = await fetch("/parse", {
+                method: "POST",
+                body: formData
+            });
+            const data = await resp.json();
+            if (data.success) {
+                // Fetch parsed content
+                const docResp = await fetch(`/api/document/${data.metadata.doc_id}`);
+                const docData = await docResp.json();
+
+                if (docData.success) {
+                    const md = docData.document.markdown;
+                    const txt = docData.document.text;
+
+                    document.getElementById("renderedMarkdown").innerHTML = marked.parse(md);
+                    document.getElementById("rawMarkdownContent").textContent = md;
+                    document.getElementById("rawTextContent").textContent = txt;
+
+                    // Enable actions
+                    document.getElementById("copyMarkdownBtn").classList.remove("d-none");
+                    const dlMd = document.getElementById("downloadMdLink");
+                    dlMd.href = `/download/${data.metadata.doc_id}/md`;
+                    dlMd.classList.remove("d-none");
+
+                    const dlTxt = document.getElementById("downloadTxtLink");
+                    dlTxt.href = `/download/${data.metadata.doc_id}/txt`;
+                    dlTxt.classList.remove("d-none");
+
+                    hljs.highlightAll();
+                }
+            } else {
+                alert("Parsing failed: " + (data.error || "Unknown error"));
+            }
+        } catch (err) {
+            alert("Error during parsing: " + err.message);
+        } finally {
+            progress.classList.add("d-none");
+            submitBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}
+

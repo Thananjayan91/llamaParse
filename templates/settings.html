@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - LlamaParse & RAG Studio{% endblock %}
+
+{% block content %}
+<div class="row g-4 justify-content-center">
+    <div class="col-lg-8">
+        <div class="card card-custom p-4">
+            <h4 class="fw-bold mb-1"><i class="bi bi-gear text-primary me-2"></i>API Configuration & Keys</h4>
+            <p class="text-secondary small mb-4">Manage API keys for LlamaCloud (LlamaParse & Extraction) and LLM providers for RAG answering.</p>
+
+            <form method="POST" action="{{ url_for('settings_page') }}">
+                <!-- LlamaCloud Key -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-light">
+                        <i class="bi bi-key-fill text-warning me-1"></i> LlamaCloud API Key
+                    </label>
+                    <input type="text" class="form-control font-monospace bg-dark border-secondary text-light" name="llama_cloud_key" value="{{ llama_key }}" placeholder="llx-..." required>
+                    <div class="form-text text-secondary small">
+                        Required for LlamaParse and Structured Extraction. Get your free key from <a href="https://cloud.llamaindex.ai" target="_blank" class="text-primary text-decoration-none">cloud.llamaindex.ai</a>.
+                    </div>
+                </div>
+
+                <hr class="border-secondary my-4">
+                <h6 class="fw-bold text-light mb-3"><i class="bi bi-cpu text-info me-2"></i>Optional LLM Providers for RAG Synthesis</h6>
+
+                <!-- Gemini API Key -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-light">
+                        <i class="bi bi-google text-danger me-1"></i> Google Gemini API Key (Optional)
+                    </label>
+                    <input type="password" class="form-control font-monospace bg-dark border-secondary text-light" name="gemini_key" value="{{ gemini_key }}" placeholder="AIza...">
+                    <div class="form-text text-secondary small">
+                        Used for Gemini-1.5-Flash RAG answer synthesis. If omitted, built-in Extractive RAG engine will be used.
+                    </div>
+                </div>
+
+                <!-- OpenAI API Key -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-light">
+                        <i class="bi bi-stars text-success me-1"></i> OpenAI API Key (Optional)
+                    </label>
+                    <input type="password" class="form-control font-monospace bg-dark border-secondary text-light" name="openai_key" value="{{ openai_key }}" placeholder="sk-...">
+                    <div class="form-text text-secondary small">
+                        Used for GPT-4o-mini RAG answer synthesis.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold">
+                    <i class="bi bi-check2-circle me-1"></i> Save Configuration
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,24 @@
+# Core Web Framework
+Flask>=3.1.0
+Werkzeug>=3.1.0
+python-dotenv>=1.0.1
+markdown>=3.7.0
+beautifulsoup4>=4.12.0
+
+# LlamaCloud v2 SDK (Required for LlamaParse and Structured Extraction)
+llama-cloud>=2.16.0
+
+# Local Dense Vector Embeddings (Fast, CPU-based semantic similarity)
+fastembed>=0.9.0
+
+# LlamaIndex Core & RAG
+llama-index>=0.14.0
+llama-index-core>=0.14.0
+
+# LLM Integrations (for OpenAI & Google Gemini RAG synthesis)
+google-genai>=2.0.0
+openai>=1.50.0
+llama-index-llms-openai>=0.7.0
+llama-index-embeddings-openai>=0.6.0
+llama-index-llms-gemini>=0.6.0
+llama-index-embeddings-gemini>=0.4.0

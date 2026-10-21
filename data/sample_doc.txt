@@ -1,0 +1,21 @@
+ACME CORP CLOUD SERVICES AGREEMENT & INVOICE
+Invoice ID: INV-2026-8891
+Date: October 6, 2026
+Vendor: Acme Cloud Solutions LLC, 100 Innovation Way, San Francisco, CA
+Client: Global Tech Enterprises Inc., 500 Enterprise Blvd, New York, NY
+
+1. Executive Summary & Statement of Work:
+Acme Cloud Solutions provides enterprise AI infrastructure, LlamaParse document processing engines, and semantic vector retrieval clusters. The contract term is 12 months with 99.99% SLA availability.
+
+2. Financial Breakdown & Billing:
+- Enterprise LlamaParse Agentic Plus Subscription (Annual): $12,500.00
+- Dedicated Vector Retrieval Indexing Cluster (Annual): $6,400.00
+- Custom Schema Extraction Pipeline Setup Fee: $1,100.00
+- Total Billed Amount: $20,000.00
+- Payment Terms: Net 30 days. Due Date: November 5, 2026.
+
+3. Key Contract Terms:
+- Confidentiality: All ingested documents and vector embeddings are private to the tenant.
+- Termination: Either party may terminate with 30 days written notice.
+- Governing Law: State of California.
+

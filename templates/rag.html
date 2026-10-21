@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}RAG & Retrieval Studio - LlamaParse & RAG Studio{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="bi bi-chat-dots-fill text-info me-2"></i>RAG & Retrieval Studio</h3>
+                <p class="text-secondary mb-0">Ask natural language questions across your parsed documents with semantic retrieval & node citations.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query Configuration & Controls -->
+    <div class="col-lg-4">
+        <div class="card card-custom p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-sliders text-info me-2"></i>RAG Options</h5>
+
+            <form id="ragQueryForm">
+                <!-- Select Target Documents -->
+                <div class="mb-3">
+                    <label class="form-label text-secondary small fw-semibold">Target Documents</label>
+                    <select class="form-select bg-dark border-secondary text-light small" id="docFilterSelect" multiple style="height: 120px;">
+                        {% for doc in parsed_docs %}
+                        <option value="{{ doc.doc_id }}" selected>{{ doc.original_filename }} ({{ doc.tier }})</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text text-secondary small">Hold Ctrl / Cmd to select specific documents. Defaults to all.</div>
+                </div>
+
+                <!-- Top K Chunks -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label text-secondary small fw-semibold">Top-K Chunks to Retrieve</label>
+                        <span class="badge bg-secondary" id="topKValue">4</span>
+                    </div>
+                    <input type="range" class="form-range" id="topKRange" min="1" max="10" value="4" oninput="document.getElementById('topKValue').innerText = this.value">
+                </div>
+
+                <!-- LLM Provider -->
+                <div class="mb-4">
+                    <label class="form-label text-secondary small fw-semibold">Generation Engine</label>
+                    <select class="form-select bg-dark border-secondary text-light small" id="providerSelect">
+                        <option value="auto">Auto (Best Available Engine)</option>
+                        <option value="extractive">Local Semantic Extractive RAG</option>
+                        {% if has_gemini %}<option value="gemini">Google Gemini 1.5 Flash</option>{% endif %}
+                        {% if has_openai %}<option value="openai">OpenAI GPT-4o-mini</option>{% endif %}
+                    </select>
+                </div>
+
+                <div class="alert alert-secondary py-2 small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Indexed Documents: <strong>{{ parsed_docs|length }}</strong>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sample Questions -->
+        <div class="card card-custom p-3">
+            <span class="text-secondary small fw-semibold mb-2 d-block">Sample Quick Queries:</span>
+            <div class="d-flex flex-column gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="setQuery('Summarize the main points and key takeaways from the document.')">
+                    <i class="bi bi-arrow-right-short text-info"></i> Summarize the main points
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="setQuery('What are the key financial numbers, dates, or metrics mentioned?')">
+                    <i class="bi bi-arrow-right-short text-info"></i> Extract key numbers and metrics
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="setQuery('List any action items, obligations, or next steps found.')">
+                    <i class="bi bi-arrow-right-short text-info"></i> List action items & next steps
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query Chat & Results Area -->
+    <div class="col-lg-8">
+        <div class="card card-custom p-4 d-flex flex-column h-100">
+            <!-- Search Input Box -->
+            <div class="mb-4">
+                <label class="form-label text-secondary small fw-semibold">Ask a Question / Enter Query</label>
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-lg bg-dark border-secondary text-light" id="queryInput" placeholder="e.g. What is the total invoice amount and payment deadline?" autofocus>
+                    <button class="btn btn-primary px-4 fw-semibold d-flex align-items-center gap-2" id="sendQueryBtn" onclick="submitRAGQuery()">
+                        <i class="bi bi-send-fill"></i> Ask RAG
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="queryLoading" class="text-center my-4 d-none">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="fw-semibold text-light mt-2">Retrieving Context Nodes & Generating Answer...</div>
+            </div>
+
+            <!-- Answer Container -->
+            <div id="answerSection" class="d-none flex-grow-1">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-bold mb-0 text-gradient"><i class="bi bi-robot me-2"></i>Synthesized Answer</h5>
+                        <span class="badge bg-info-subtle text-info" id="engineUsedBadge">Engine</span>
+                    </div>
+                    <div class="p-4 bg-dark-tertiary border border-secondary rounded markdown-body text-light" id="answerContent">
+                    </div>
+                </div>
+
+                <!-- Retrieved Source Nodes -->
+                <div>
+                    <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-layers text-warning me-2"></i>Retrieved Context Chunks (Sources)</h6>
+                    <div class="row g-3" id="retrievedSourcesList">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-5 text-secondary">
+                <i class="bi bi-search display-4 d-block mb-3 opacity-50"></i>
+                <h5>Ask any question to retrieve answers from your parsed documents</h5>
+                <p class="small">The RAG engine will find the most relevant chunks and provide a grounded response with source citations.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setQuery(text) {
+    document.getElementById("queryInput").value = text;
+    submitRAGQuery();
+}
+
+async function submitRAGQuery() {
+    const queryInput = document.getElementById("queryInput");
+    const prompt = queryInput.value.trim();
+    if (!prompt) return;
+
+    const docSelect = document.getElementById("docFilterSelect");
+    const selectedDocs = Array.from(docSelect.selectedOptions).map(opt => opt.value);
+    const topK = parseInt(document.getElementById("topKRange").value, 10);
+    const provider = document.getElementById("providerSelect").value;
+
+    const loading = document.getElementById("queryLoading");
+    const answerSection = document.getElementById("answerSection");
+    const emptyState = document.getElementById("emptyState");
+    const sendBtn = document.getElementById("sendQueryBtn");
+
+    emptyState.classList.add("d-none");
+    loading.classList.remove("d-none");
+    answerSection.classList.add("d-none");
+    sendBtn.disabled = true;
+
+    try {
+        const resp = await fetch("/api/query", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                prompt: prompt,
+                doc_ids: selectedDocs.length ? selectedDocs : null,
+                top_k: topK,
+                provider: provider
+            })
+        });
+
+        const data = await resp.json();
+        if (data.success) {
+            const res = data.result;
+            // Render Answer
+            document.getElementById("answerContent").innerHTML = marked.parse(res.answer);
+            document.getElementById("engineUsedBadge").textContent = `Powered by: ${res.provider_used}`;
+
+            // Render Sources
+            const sourcesContainer = document.getElementById("retrievedSourcesList");
+            sourcesContainer.innerHTML = "";
+
+            if (res.sources && res.sources.length > 0) {
+                res.sources.forEach((s, idx) => {
+                    const col = document.createElement("div");
+                    col.className = "col-md-6";
+                    col.innerHTML = `
+                        <div class="card card-source p-3 h-100 border-secondary bg-dark">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-secondary small"><i class="bi bi-file-earmark-text me-1"></i>${s.filename}</span>
+                                <span class="badge bg-warning text-dark font-monospace">Score: ${s.score}</span>
+                            </div>
+                            <div class="source-text small text-secondary overflow-auto" style="max-height: 140px;">
+                                ${s.text}
+                            </div>
+                        </div>
+                    `;
+                    sourcesContainer.appendChild(col);
+                });
+            } else {
+                sourcesContainer.innerHTML = '<div class="col-12 text-secondary small">No matching chunks retrieved.</div>';
+            }
+
+            answerSection.classList.remove("d-none");
+            hljs.highlightAll();
+        } else {
+            alert("Query failed: " + (data.error || "Unknown error"));
+        }
+    } catch (err) {
+        alert("Query error: " + err.message);
+    } finally {
+        loading.classList.add("d-none");
+        sendBtn.disabled = false;
+    }
+}
+
+document.getElementById("queryInput").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        submitRAGQuery();
+    }
+});
+</script>
+{% endblock %}
+
